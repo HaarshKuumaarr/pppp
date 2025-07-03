@@ -1,3 +1,8 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Friendship Proposal 💝</title>
     <style>
         * {
@@ -389,6 +394,83 @@
 
     <script>
         let noClickCount = 0;
+        let userScore = {
+            yesClicks: 0,
+            noClicks: 0,
+            jokesViewed: 0,
+            timeSpent: 0,
+            startTime: Date.now(),
+            finalDecision: null,
+            interactionData: []
+        };
+        
+        // Track user interactions
+        function trackInteraction(action, details = {}) {
+            userScore.interactionData.push({
+                action: action,
+                timestamp: Date.now(),
+                timeFromStart: Date.now() - userScore.startTime,
+                details: details
+            });
+        }
+        
+        // Calculate friendship compatibility score
+        function calculateFriendshipScore() {
+            let score = 0;
+            
+            // Base score for visiting the page
+            score += 10;
+            
+            // Points for saying yes
+            if (userScore.yesClicks > 0) {
+                score += 50;
+            }
+            
+            // Deduct points for saying no (but not too much!)
+            score -= (userScore.noClicks * 5);
+            
+            // Points for viewing jokes
+            score += (userScore.jokesViewed * 10);
+            
+            // Bonus for spending time (every 10 seconds = 2 points)
+            score += Math.floor(userScore.timeSpent / 10000) * 2;
+            
+            // Persistence bonus (if they kept clicking despite saying no)
+            if (userScore.noClicks > 5) {
+                score += 20; // They're persistent!
+            }
+            
+            // Cap the score between 0 and 100
+            return Math.min(Math.max(score, 0), 100);
+        }
+        
+        // Display score and analysis
+        function showFriendshipAnalysis() {
+            const score = calculateFriendshipScore();
+            const timeSpentMinutes = Math.floor(userScore.timeSpent / 60000);
+            const timeSpentSeconds = Math.floor((userScore.timeSpent % 60000) / 1000);
+            
+            let analysis = "";
+            if (score >= 80) {
+                analysis = "🌟 PERFECT FRIEND MATERIAL! 🌟<br>You're going to be an amazing friend!";
+            } else if (score >= 60) {
+                analysis = "😊 GREAT FRIENDSHIP POTENTIAL! 😊<br>This friendship is going to be awesome!";
+            } else if (score >= 40) {
+                analysis = "🤔 GOOD FRIEND VIBES! 🤔<br>We can definitely work on this friendship!";
+            } else if (score >= 20) {
+                analysis = "😅 SLOW START BUT PROMISING! 😅<br>Give friendship a chance!";
+            } else {
+                analysis = "😢 TOUGH CROWD! 😢<br>But I believe in the power of friendship!";
+            }
+            
+            return {
+                score: score,
+                analysis: analysis,
+                timeSpent: `${timeSpentMinutes}m ${timeSpentSeconds}s`,
+                interactions: userScore.interactionData.length
+            };
+        }
+        
         const noMessages = [
             "Are you sure? 🥺",
             "Please reconsider! 🙏",
@@ -412,6 +494,12 @@
         ];
 
         function handleYes() {
+            // Track interaction
+            userScore.yesClicks++;
+            userScore.finalDecision = 'yes';
+            userScore.timeSpent = Date.now() - userScore.startTime;
+            trackInteraction('yes_clicked', { clickCount: userScore.yesClicks });
+            
             const jokes = [
                 "Why don't scientists trust atoms? Because they make up everything! 🌌",
                 "What do you call a fake noodle? An impasta! 🍝",
@@ -428,12 +516,22 @@
             ];
             
             const randomJoke = jokes[Math.floor(Math.random() * jokes.length)];
+            const analysis = showFriendshipAnalysis();
             
             document.getElementById('response').innerHTML = `
                 <div>
                     <h2>🎉 YAYYY! 🎉</h2>
                     <p>This is the beginning of an amazing friendship! 🌈</p>
                     <p>Let's create wonderful memories together! 🎊</p>
+                    
+                    <div style="background: rgba(255,255,255,0.15); padding: 20px; border-radius: 15px; margin: 20px 0; border: 2px solid rgba(255,215,0,0.5);">
+                        <h3>🏆 FRIENDSHIP COMPATIBILITY REPORT 🏆</h3>
+                        <p><strong>Score: ${analysis.score}/100</strong> ⭐</p>
+                        <p>${analysis.analysis}</p>
+                        <p><small>📊 Time spent: ${analysis.timeSpent} | Interactions: ${analysis.interactions}</small></p>
+                        <button onclick="showDetailedStats()" style="margin-top: 10px; padding: 8px 16px; background: rgba(255,255,255,0.2); color: white; border: 1px solid rgba(255,255,255,0.3); border-radius: 20px; cursor: pointer; font-size: 0.9em;">View Detailed Stats 📈</button>
+                    </div>
+                    
                     <hr style="margin: 20px 0; border: 1px solid rgba(255,255,255,0.3);">
                     <h3>🎭 Here's a joke to celebrate our friendship:</h3>
                     <p style="font-size: 1.2em; font-style: italic; margin: 15px 0; padding: 15px; background: rgba(255,255,255,0.1); border-radius: 10px; border-left: 4px solid #FFD700;">${randomJoke}</p>
@@ -457,6 +555,14 @@
         }
 
         function handleNo() {
+            // Track interaction
+            userScore.noClicks++;
+            userScore.timeSpent = Date.now() - userScore.startTime;
+            trackInteraction('no_clicked', { 
+                clickCount: userScore.noClicks, 
+                message: noMessages[noClickCount] || 'Auto-accept'
+            });
+            
             const noButton = document.getElementById('noButton');
             const response = document.getElementById('response');
             
@@ -498,11 +604,24 @@
                 
             } else {
                 // After many clicks, auto-accept
+                userScore.finalDecision = 'forced_yes';
+                trackInteraction('forced_acceptance', { totalNoClicks: userScore.noClicks });
+                
+                const analysis = showFriendshipAnalysis();
+                
                 response.innerHTML = `
                     <div>
                         <h3>Fine, I'll take that as a maybe! 😄</h3>
                         <p>I know deep down you want to be friends! 🤝</p>
                         <p>Welcome to our friendship! 🎊</p>
+                        
+                        <div style="background: rgba(255,255,255,0.15); padding: 15px; border-radius: 10px; margin: 15px 0; border: 2px solid rgba(255,140,0,0.5);">
+                            <h4>🏆 PERSISTENCE AWARD! 🏆</h4>
+                            <p><strong>Score: ${analysis.score}/100</strong> ⭐</p>
+                            <p>${analysis.analysis}</p>
+                            <p><small>You clicked "No" ${userScore.noClicks} times! That's dedication! 😂</small></p>
+                            <button onclick="showDetailedStats()" style="margin-top: 10px; padding: 6px 12px; background: rgba(255,255,255,0.2); color: white; border: 1px solid rgba(255,255,255,0.3); border-radius: 15px; cursor: pointer; font-size: 0.8em;">View Stats 📊</button>
+                        </div>
                     </div>
                 `;
                 
@@ -564,6 +683,10 @@
 
         // Show more jokes function
         function showMoreJokes() {
+            // Track joke viewing
+            userScore.jokesViewed++;
+            trackInteraction('joke_requested', { jokeNumber: userScore.jokesViewed });
+            
             const moreJokes = [
                 "Why don't programmers like nature? It has too many bugs! 🐛💻",
                 "What's the best thing about Switzerland? I don't know, but the flag is a big plus! 🇨🇭➕",
@@ -606,6 +729,84 @@
                 `;
                 document.head.appendChild(sparkleStyle);
             }
+        }
+        
+        // Show detailed statistics
+        function showDetailedStats() {
+            const analysis = showFriendshipAnalysis();
+            const timeSpentMinutes = Math.floor(userScore.timeSpent / 60000);
+            const timeSpentSeconds = Math.floor((userScore.timeSpent % 60000) / 1000);
+            
+            // Create a popup or modal-like display
+            const statsHTML = `
+                <div style="position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); background: rgba(0,0,0,0.9); color: white; padding: 30px; border-radius: 20px; max-width: 500px; width: 90%; z-index: 10000; border: 2px solid #FFD700; box-shadow: 0 0 30px rgba(255,215,0,0.5);">
+                    <h2 style="text-align: center; margin-bottom: 20px;">📊 USER EXPERIENCE REPORT 📊</h2>
+                    
+                    <div style="background: rgba(255,255,255,0.1); padding: 15px; border-radius: 10px; margin: 10px 0;">
+                        <h3>🏆 Final Score: ${analysis.score}/100</h3>
+                        <p>${analysis.analysis}</p>
+                    </div>
+                    
+                    <div style="background: rgba(255,255,255,0.1); padding: 15px; border-radius: 10px; margin: 10px 0;">
+                        <h4>📈 Interaction Summary:</h4>
+                        <p>• Yes clicks: ${userScore.yesClicks} 👍</p>
+                        <p>• No clicks: ${userScore.noClicks} 👎</p>
+                        <p>• Jokes viewed: ${userScore.jokesViewed} 😂</p>
+                        <p>• Time spent: ${timeSpentMinutes}m ${timeSpentSeconds}s ⏱️</p>
+                        <p>• Final decision: ${userScore.finalDecision || 'pending'} 🤔</p>
+                        <p>• Total interactions: ${userScore.interactionData.length} 🎯</p>
+                    </div>
+                    
+                    <div style="background: rgba(255,255,255,0.1); padding: 15px; border-radius: 10px; margin: 10px 0; max-height: 150px; overflow-y: auto;">
+                        <h4>🕒 Interaction Timeline:</h4>
+                        ${userScore.interactionData.map((interaction, index) => 
+                            `<p style="font-size: 0.9em; margin: 5px 0;">• ${Math.floor(interaction.timeFromStart/1000)}s: ${interaction.action}</p>`
+                        ).join('')}
+                    </div>
+                    
+                    <div style="text-align: center; margin-top: 20px;">
+                        <button onclick="exportUserData()" style="margin: 5px; padding: 10px 15px; background: linear-gradient(45deg, #4CAF50, #45a049); color: white; border: none; border-radius: 20px; cursor: pointer;">📥 Export Data</button>
+                        <button onclick="document.body.removeChild(this.parentElement.parentElement)" style="margin: 5px; padding: 10px 15px; background: linear-gradient(45deg, #f44336, #d32f2f); color: white; border: none; border-radius: 20px; cursor: pointer;">❌ Close</button>
+                    </div>
+                </div>
+            `;
+            
+            const statsDiv = document.createElement('div');
+            statsDiv.innerHTML = statsHTML;
+            document.body.appendChild(statsDiv);
+            
+            // Track this interaction too!
+            trackInteraction('stats_viewed', { score: analysis.score });
+        }
+        
+        // Export user data function
+        function exportUserData() {
+            const analysis = showFriendshipAnalysis();
+            const exportData = {
+                timestamp: new Date().toISOString(),
+                userScore: userScore,
+                analysis: analysis,
+                summary: {
+                    finalScore: analysis.score,
+                    timeSpent: analysis.timeSpent,
+                    totalInteractions: userScore.interactionData.length,
+                    decision: userScore.finalDecision
+                }
+            };
+            
+            const dataStr = JSON.stringify(exportData, null, 2);
+            const dataUri = 'data:application/json;charset=utf-8,'+ encodeURIComponent(dataStr);
+            
+            const exportFileDefaultName = `friendship-proposal-data-${new Date().toISOString().split('T')[0]}.json`;
+            
+            const linkElement = document.createElement('a');
+            linkElement.setAttribute('href', dataUri);
+            linkElement.setAttribute('download', exportFileDefaultName);
+            linkElement.click();
+            
+            trackInteraction('data_exported', { fileName: exportFileDefaultName });
+            
+            alert('📊 Data exported successfully! You can now analyze the user experience data. 🎉');
         }
         
         // Create more 3D objects dynamically
